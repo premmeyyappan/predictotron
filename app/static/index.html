@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Predictotron — Prediction Market Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --surface2:  #22263a;
+      --border:    #2d3150;
+      --accent:    #6366f1;
+      --accent-h:  #818cf8;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --radius:    10px;
+      --font:      'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    html { font-size: 14px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #a855f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      background: linear-gradient(90deg, #e2e8f0, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .connection-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      transition: background 0.3s;
+    }
+
+    .dot.connected { background: var(--green); }
+    .dot.connecting { background: var(--amber); animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Stats Bar ── */
+    .stats-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      transition: color 0.3s;
+    }
+
+    .stat-value.loading { color: var(--muted); }
+
+    /* ── Main Layout ── */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      grid-template-rows: 1fr;
+      gap: 0;
+      overflow: hidden;
+      height: calc(100vh - 60px - 57px);
+    }
+
+    .left-pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+    }
+
+    /* ── Market Table ── */
+    .table-toolbar {
+      padding: 14px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 180px;
+      padding: 8px 12px 8px 34px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .search-box:focus { border-color: var(--accent); }
+
+    select {
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus { border-color: var(--accent); }
+
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover { background: var(--border); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    th:hover { color: var(--text); }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(45, 49, 80, 0.5);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: var(--surface2); }
+    tbody tr.selected { background: rgba(99, 102, 241, 0.12); }
+
+    td {
+      padding: 11px 16px;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 300px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .badge-politics  { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .badge-economics { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .badge-sports    { background: rgba(16,185,129,0.2); color: #34d399; }
+    .badge-science   { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .badge-crypto    { background: rgba(249,115,22,0.2); color: #fb923c; }
+    .badge-climate   { background: rgba(34,197,94,0.2);  color: #4ade80; }
+    .badge-tech      { background: rgba(99,102,241,0.2); color: #818cf8; }
+    .badge-entertainment { background: rgba(236,72,153,0.2); color: #f472b6; }
+    .badge-default   { background: rgba(148,163,184,0.15); color: var(--muted); }
+
+    .status-active   { color: var(--green); }
+    .status-resolved { color: var(--muted); }
+
+    /* ── Right Pane ── */
+    .right-pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Chart Panel ── */
+    .chart-panel {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .selected-market-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.4;
+      min-height: 36px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 160px;
+    }
+
+    .chart-empty {
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    .chart-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .meta-label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+    .meta-value { font-size: 14px; font-weight: 600; }
+    .meta-value.up   { color: var(--green); }
+    .meta-value.down { color: var(--red); }
+    .meta-value.neutral { color: var(--text); }
+
+    /* ── Live Feed ── */
+    .feed-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .feed-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .feed-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .feed-count {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    .feed-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .feed-item {
+      padding: 8px 16px;
+      border-bottom: 1px solid rgba(45,49,80,0.4);
+      animation: slidein 0.2s ease;
+    }
+
+    @keyframes slidein {
+      from { opacity: 0; transform: translateX(8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .feed-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .feed-type {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent-h);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .feed-time {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .feed-msg {
+      font-size: 12px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .feed-price {
+      font-weight: 600;
+    }
+
+    .feed-price.up   { color: var(--green); }
+    .feed-price.down { color: var(--red); }
+
+    .feed-empty {
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Loading Skeleton ── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-row td { padding: 13px 16px; }
+    .skeleton-text { height: 12px; border-radius: 4px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto;
+        height: auto;
+      }
+      .right-pane { border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">P</div>
+      <div>
+        <div class="logo-text">Predictotron</div>
+        <div class="logo-sub">Prediction Market Analytics</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="connection-badge" id="connection-badge">
+        <div class="dot connecting" id="ws-dot"></div>
+        <span id="ws-label">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-label">Total Markets</div>
+      <div class="stat-value loading" id="stat-total">—</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Active Markets</div>
+      <div class="stat-value loading" id="stat-active">—</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Data Points</div>
+      <div class="stat-value loading" id="stat-points">—</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Live Messages</div>
+      <div class="stat-value" id="stat-live">0</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Left: Market Table -->
+    <div class="left-pane">
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            class="search-box"
+            id="search"
+            type="text"
+            placeholder="Search markets…"
+            autocomplete="off"
+          />
+        </div>
+        <select id="category-filter">
+          <option value="">All Categories</option>
+          <option>Politics</option>
+          <option>Economics</option>
+          <option>Sports</option>
+          <option>Science</option>
+          <option>Crypto</option>
+          <option>Climate</option>
+          <option>Tech</option>
+          <option>Entertainment</option>
+        </select>
+        <select id="source-filter">
+          <option value="">All Sources</option>
+          <option>polymarket</option>
+          <option>kalshi</option>
+          <option>manifold</option>
+        </select>
+        <button class="btn primary" id="refresh-btn" onclick="loadMarkets()">Refresh</button>
+      </div>
+
+      <div class="table-wrap" id="table-wrap">
+        <table id="market-table">
+          <thead>
+            <tr>
+              <th data-col="title">Market</th>
+              <th data-col="category">Category</th>
+              <th data-col="source">Source</th>
+              <th data-col="resolution_date">Resolves</th>
+              <th data-col="resolved">Status</th>
+            </tr>
+          </thead>
+          <tbody id="market-tbody">
+            <!-- skeleton rows -->
+            <tr class="skeleton-row"><td><div class="skeleton skeleton-text" style="width:70%"></div></td><td><div class="skeleton skeleton-text" style="width:60px"></div></td><td><div class="skeleton skeleton-text" style="width:70px"></div></td><td><div class="skeleton skeleton-text" style="width:80px"></div></td><td><div class="skeleton skeleton-text" style="width:50px"></div></td></tr>
+            <tr class="skeleton-row"><td><div class="skeleton skeleton-text" style="width:55%"></div></td><td><div class="skeleton skeleton-text" style="width:55px"></div></td><td><div class="skeleton skeleton-text" style="width:70px"></div></td><td><div class="skeleton skeleton-text" style="width:80px"></div></td><td><div class="skeleton skeleton-text" style="width:50px"></div></td></tr>
+            <tr class="skeleton-row"><td><div class="skeleton skeleton-text" style="width:80%"></div></td><td><div class="skeleton skeleton-text" style="width:65px"></div></td><td><div class="skeleton skeleton-text" style="width:70px"></div></td><td><div class="skeleton skeleton-text" style="width:80px"></div></td><td><div class="skeleton skeleton-text" style="width:50px"></div></td></tr>
+            <tr class="skeleton-row"><td><div class="skeleton skeleton-text" style="width:62%"></div></td><td><div class="skeleton skeleton-text" style="width:58px"></div></td><td><div class="skeleton skeleton-text" style="width:70px"></div></td><td><div class="skeleton skeleton-text" style="width:80px"></div></td><td><div class="skeleton skeleton-text" style="width:50px"></div></td></tr>
+            <tr class="skeleton-row"><td><div class="skeleton skeleton-text" style="width:75%"></div></td><td><div class="skeleton skeleton-text" style="width:62px"></div></td><td><div class="skeleton skeleton-text" style="width:70px"></div></td><td><div class="skeleton skeleton-text" style="width:80px"></div></td><td><div class="skeleton skeleton-text" style="width:50px"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Chart + Feed -->
+    <div class="right-pane">
+      <!-- Chart Panel -->
+      <div class="chart-panel">
+        <div class="panel-title">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Price History
+        </div>
+        <div class="selected-market-name" id="selected-name">Select a market to view its price chart</div>
+        <div id="chart-area">
+          <div class="chart-empty" id="chart-empty">Click any market row to load its price chart</div>
+          <div style="display:none" id="chart-container-wrap">
+            <div class="chart-container">
+              <canvas id="price-chart"></canvas>
+            </div>
+            <div class="chart-meta" id="chart-meta"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Feed -->
+      <div class="feed-panel">
+        <div class="feed-header">
+          <div class="feed-title">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="6" cy="6" r="2" fill="currentColor"/>
+            </svg>
+            Live Feed
+          </div>
+          <div class="feed-count" id="feed-count">0 messages</div>
+        </div>
+        <div class="feed-list" id="feed-list">
+          <div class="feed-empty" id="feed-empty">
+            Waiting for live market updates…<br/>
+            <span style="font-size:11px;opacity:0.6">Messages appear here as prices change</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>
