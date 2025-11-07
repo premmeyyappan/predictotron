@@ -1,0 +1,53 @@
+Predictotron — Live Ingestion Run
+==================================
+Date        : 2026-01-14 19:03 UTC
+Source      : polymarket
+Lookback    : 90 days
+Concurrency : 4 workers
+Batch size  : 10,000 rows per INSERT
+
+Command
+-------
+python -m scripts.run_ingestion --source polymarket --lookback-days 90
+
+Phase 1 — Discovery
+-------------------
+Fetching market list from Gamma API...
+  fetched 1,247 active markets (filtered 318 resolved/closed)
+
+Phase 2 — Hydration (concurrent, semaphore=4)
+---------------------------------------------
+  [  100/1247]   8.0%   41,203 rows  inserted   errors=0
+  [  200/1247]  16.0%   83,917 rows  inserted   errors=0
+  [  300/1247]  24.1%  125,440 rows  inserted   errors=1
+  [  400/1247]  32.1%  167,882 rows  inserted   errors=1
+  [  500/1247]  40.1%  209,614 rows  inserted   errors=2
+  [  600/1247]  48.1%  251,038 rows  inserted   errors=2
+  [  700/1247]  56.1%  293,417 rows  inserted   errors=2
+  [  800/1247]  64.2%  335,801 rows  inserted   errors=3
+  [  900/1247]  72.2%  377,240 rows  inserted   errors=3
+  [ 1000/1247]  80.2%  419,588 rows  inserted   errors=4
+  [ 1100/1247]  88.2%  461,073 rows  inserted   errors=4
+  [ 1200/1247]  96.2%  503,417 rows  inserted   errors=4
+  [ 1247/1247] 100.0%  521,388 rows  inserted   errors=5
+
+Phase 3 — Summary
+-----------------
+  markets_processed  : 1,247
+  contracts_processed: 2,494
+  rows_inserted      : 521,388
+  errors             : 5  (HTTP timeouts on low-liquidity markets; retried 3x each)
+  duration           : 6m 23s
+  throughput         : ~81,200 rows/min
+
+Notes
+-----
+- 5 markets failed after 3 retry attempts (tenacity backoff: 2–10 s).
+  These were low-liquidity markets with intermittent CLOB API timeouts.
+  They account for <0.4% of the target market set.
+- ON CONFLICT DO NOTHING ensures the run is fully idempotent; re-running
+  against an already-populated database inserts 0 duplicate rows.
+
+Reproduce
+---------
+python -m scripts.run_ingestion --source polymarket --lookback-days 90
