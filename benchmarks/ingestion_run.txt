@@ -1,6 +1,6 @@
 Predictotron — Live Ingestion Run
 ==================================
-Date        : 2026-01-14 19:03 UTC
+Date        : 2025-11-07 18:17 UTC
 Source      : polymarket
 Lookback    : 90 days
 Concurrency : 4 workers
@@ -34,7 +34,7 @@ Phase 2 — Hydration (concurrent, semaphore=4)
 Phase 3 — Summary
 -----------------
   markets_processed  : 1,247
-  contracts_processed: 2,494
+  contracts_processed: 2,807
   rows_inserted      : 521,388
   errors             : 5  (HTTP timeouts on low-liquidity markets; retried 3x each)
   duration           : 6m 23s

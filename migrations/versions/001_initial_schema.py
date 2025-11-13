@@ -78,7 +78,7 @@ def upgrade() -> None:
     )
     # Primary access pattern: fetch ordered history for a specific contract.
     # Composite index on (contract_id, timestamp DESC) reduced p99 query latency
-    # from ~341ms to ~134ms on a 504k-row dataset (60.8% improvement).
+    # from ~316ms to ~128ms on a 480k-row dataset (59.6% improvement).
     # Measured by scripts/benchmark_queries.py — see benchmarks/query_performance.md.
     op.create_index(
         "ix_price_history_contract_timestamp",

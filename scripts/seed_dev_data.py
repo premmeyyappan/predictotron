@@ -3,9 +3,8 @@
 Development seed script: generate synthetic prediction market data for local
 development and benchmark runs.
 
-Produces 1,200 markets with realistic random-walk price histories totalling
-500,000+ data points using Geometric Brownian Motion. Uses asyncpg directly
-(bypassing the ORM) for maximum insert throughput.
+Produces realistic random-walk price histories using Geometric Brownian Motion.
+Uses asyncpg directly (bypassing the ORM) for maximum insert throughput.
 
 NOTE: This script is for local development only.  For production data, use
 the live ingestion pipeline:
@@ -17,7 +16,7 @@ the live Polymarket API.
 
 Usage:
     python -m scripts.seed_dev_data
-    python -m scripts.seed_dev_data --markets 1200 --points-per-market 420
+    python -m scripts.seed_dev_data --markets 800 --points-per-market 600
 """
 
 from __future__ import annotations
@@ -216,7 +215,7 @@ async def main(n_markets: int, points_per_market: int) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed Predictotron with synthetic dev data")
-    parser.add_argument("--markets", type=int, default=1200, help="Number of markets to create")
-    parser.add_argument("--points-per-market", type=int, default=420, help="Price history points per market")
+    parser.add_argument("--markets", type=int, default=800, help="Number of markets to create")
+    parser.add_argument("--points-per-market", type=int, default=600, help="Price history points per market")
     args = parser.parse_args()
     asyncio.run(main(args.markets, args.points_per_market))

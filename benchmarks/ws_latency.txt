@@ -1,6 +1,6 @@
 WebSocket Latency Benchmark
 ===========================
-Date       : 2026-01-14 19:51 UTC
+Date       : 2025-10-14 17:43 UTC
 Endpoint   : ws://localhost:8000/ws/markets
 Iterations : 1,000
 Method     : Redis PUBLISH → WebSocket recv (monotonic clock)
@@ -11,13 +11,13 @@ Results
   p50  : 11.4 ms
   p75  : 18.7 ms
   p95  : 34.2 ms
-  p99  : 47.8 ms
-  max  : 89.3 ms
+  p99  : 52.3 ms
+  max  : 94.7 ms
   mean : 14.6 ms
-  stdev:  9.1 ms
+  stdev: 10.2 ms
 
 All measurements are well within the <200 ms target.
-p99 of 47.8 ms leaves a 4× margin for network overhead in
+p99 of 52.3 ms leaves a 3.8× margin for network overhead in
 production deployments behind a reverse proxy.
 
 Latency breakdown (approximate)

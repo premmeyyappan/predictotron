@@ -13,7 +13,7 @@ Deduplication is handled at the database layer via ON CONFLICT DO NOTHING,
 making the pipeline safely idempotent for re-runs and partial backfills.
 
 Typical throughput on a single worker: ~80,000 rows/minute with batch_size=10,000.
-At that rate, 500,000 data points across 1,200 markets completes in ~6 minutes.
+At that rate, 500,000 data points completes in ~6 minutes.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ class IngestionPipeline:
 
     async def _ingest_source(self, source: BaseMarketSource) -> None:
         logger.info(f"Fetching market list from {source.source_name}")
-        markets = await source.fetch_markets(limit=1200)
+        markets = await source.fetch_markets()
         logger.info(f"Discovered {len(markets)} markets from {source.source_name}")
 
         # Upsert market metadata
